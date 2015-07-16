@@ -170,6 +170,7 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         let config = WKWebViewConfiguration()
         config.userContentController.addScriptMessageHandler(self, name: "interOp")
         webView = WKWebView(frame: CGRectZero, configuration: config)
+        webView.navigationDelegate = self
         
         if Client.loadRemote {
             return
