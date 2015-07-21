@@ -1,7 +1,5 @@
 window.ladybug = {
-  postJSON: false,
-  timeout: 0,
-  cache: false
+  timeout: 0
 };
 
 $(function() {
@@ -12,9 +10,9 @@ function sendRequest(id, type, url, params, headers) {
   $.ajax({
     type: type,
     url: url,
-    cache: false,
     timeout: ladybug.timeout,
-    data: (type == 'post' || type == 'put') && ladybug.postJSON ? JSON.stringify(params) : params,
+    data: params,
+    dataType: 'json',
     headers: headers
   }).done(function(data, textStatus, jqXHR) {
     postMessage({ message: 'response', id: id, data: data, textStatus: textStatus, jqXHR: jqXHR });

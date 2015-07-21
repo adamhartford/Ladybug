@@ -17,8 +17,6 @@ class RequestViewController: NSViewController {
 
         // Do any additional setup after loading the view.
         
-        Ladybug.timeout = 5000
-        Ladybug.cache = true
         Ladybug.baseURL = "http://httpbin.org"
         
         Ladybug.setBasicAuth("SomeUser", password: "SomePassword")

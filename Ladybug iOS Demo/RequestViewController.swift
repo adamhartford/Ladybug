@@ -14,10 +14,7 @@ class RequestViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        Ladybug.timeout = 5000
-        Ladybug.cache = true
         Ladybug.baseURL = "http://httpbin.org"
-        
         Ladybug.setBasicAuth("SomeUser", password: "SomePassword")
 
         // Add header for all requests
@@ -26,6 +23,7 @@ class RequestViewController: UITableViewController {
         // Callback for all requests
         Ladybug.beforeSend = { req in
             req.headers["X-Bar"] = "Baz"
+            println(req)
         }
     }
 
@@ -38,7 +36,7 @@ class RequestViewController: UITableViewController {
         tableView.deselectRowAtIndexPath(indexPath, animated: true)
         switch indexPath.row {
         case 0:
-            sendGet()
+            sendGetWithParams()
         case 1:
             sendPost()
         case 2:
@@ -59,7 +57,7 @@ class RequestViewController: UITableViewController {
     
     func sendGetWithParams() {
         let params = ["foo": "bar"]
-        Ladybug.get("/get") { [weak self] response in
+        Ladybug.get("/get", parameters: params) { [weak self] response in
             println(response.data!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }

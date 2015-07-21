@@ -30,9 +30,9 @@ public struct Ladybug {
     
     public static var timeout: Int {
         get {
-            return Client.sharedInstance.timeout
+            return Client.sharedInstance.timeout / 1000
         } set {
-            Client.sharedInstance.timeout = newValue
+            Client.sharedInstance.timeout = newValue * 1000
         }
     }
     
@@ -83,23 +83,23 @@ public struct Ladybug {
         }
     }
     
-    public static func get(url: String, parameters: AnyObject? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
+    public static func get(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
         send(stringWithLeadingSlash(url), method: .GET, parameters: parameters, headers: headers, beforeSend: beforeSend, done: done)
     }
     
-    public static func post(url: String, parameters: AnyObject? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
+    public static func post(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
         send(stringWithLeadingSlash(url), method: .POST, parameters: parameters, headers: headers, beforeSend: beforeSend, done: done)
     }
     
-    public static func put(url: String, parameters: AnyObject? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
+    public static func put(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
         send(stringWithLeadingSlash(url), method: .PUT, parameters: parameters, headers: headers, beforeSend: beforeSend, done: done)
     }
     
-    public static func delete(url: String, parameters: AnyObject? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
+    public static func delete(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
         send(stringWithLeadingSlash(url), method: .DELETE, parameters: parameters, headers: headers, beforeSend: beforeSend, done: done)
     }
     
-    public static func send(url: String, method: HttpMethod, parameters: AnyObject? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
+    public static func send(url: String, method: HttpMethod, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
         Client.sharedInstance.send(Request(method: method, url: baseURL + stringWithLeadingSlash(url), parameters: parameters, headers: headers, beforeSend: beforeSend, done: done))
     }
     
@@ -149,13 +149,7 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         }
     }
     
-    var cache = false {
-        didSet {
-            if ready {
-                webView.evaluateJavaScript("ladybug.cache = \(cache)", completionHandler: nil)
-            }
-        }
-    }
+    var cache = false
     
     class var sharedInstance: Client {
         struct Static {
@@ -235,9 +229,20 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
             request.headers[k] = v
         }
         
+        // Cache
+        if !Ladybug.cache && (request.method == .GET || request.method == .DELETE) {
+            let ms = Int64(NSDate().timeIntervalSince1970 * 1000)
+            if request.parameters != nil {
+                request.parameters!["_"] = "\(ms)"
+            } else {
+                request.parameters = ["_": "\(ms)"]
+            }
+        }
+        
         request.beforeSend?(request)
         beforeSend?(request)
         
+        // Params
         var data = "null"
         if let p: AnyObject = request.parameters {
             data = jsonStringFromObject(p)!
@@ -286,7 +291,7 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     // MARK: - WKScriptMessageHandler
     
     func userContentController(userContentController: WKUserContentController, didReceiveScriptMessage message: WKScriptMessage) {
-//        let json = message.body as! [String: AnyObject]
+        //let json = message.body as! [String: AnyObject]
         let json: AnyObject = jsonObjectFromString(message.body as! String)!
         let msg = json["message"] as! String
         
@@ -355,16 +360,58 @@ public enum HttpMethod {
     }
 }
 
-public class Request {
+public class Request: Printable {
     var id: String
     public var method: HttpMethod
     public var url: String
-    public var parameters: AnyObject?
+    public var parameters: [String: AnyObject]?
     public var headers: [String: String]
     public var beforeSend: (Request -> ())?
     public var done: (Response -> ())?
+    public internal(set) var settings: AnyObject!
     
-    init(method: HttpMethod = .GET, url: String = "/", parameters: AnyObject?, headers: [String: String] = [:], beforeSend: (Request -> ())?, done: (Response -> ())?) {
+    public var description: String {
+        get {
+            var components = NSURLComponents(string: url)!
+            var queryItems = [NSURLQueryItem]()
+            
+            if let params = parameters as? Dictionary<String, String> {
+                for (k,v) in params {
+                    queryItems.append(NSURLQueryItem(name: k, value: v))
+                }
+                components.queryItems = queryItems
+            }
+            
+            var result = "\(method.stringValue.uppercaseString) \(components.path!)"
+            
+            if method == .GET || method == .DELETE {
+                if queryItems.count > 0 {
+                    result += "?" + components.query!
+                }
+            }
+            
+            let sortedArray = sorted(headers, { $0.0 < $1.0 })
+            let keys = sortedArray.map { return $0.0 }
+            
+            for key in keys {
+                result += "\n" + key + ": " + headers[key]!
+            }
+            
+            if method == .POST || method == .PUT {
+                if let params: AnyObject = parameters {
+                    if let data = NSJSONSerialization.dataWithJSONObject(params, options: .allZeros, error: nil) {
+                        let json = NSString(data: data, encoding: NSUTF8StringEncoding) as! String
+                        result += "\n\n" + json
+                    }
+                }
+                
+            }
+            
+            return result
+        }
+    }
+    
+    init(method: HttpMethod = .GET, url: String = "/", parameters: [String: AnyObject]?, headers: [String: String] = [:], beforeSend: (Request -> ())?, done: (Response -> ())?) {
         id = NSUUID().UUIDString
         self.method = method
         self.url = url
