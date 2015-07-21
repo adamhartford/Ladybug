@@ -2,26 +2,49 @@ window.ladybug = {
   timeout: 0
 };
 
-$(function() {
+document.addEventListener('DOMContentLoaded', function() {
   postMessage({ message: 'ready' });
 });
 
-function sendRequest(id, type, url, params, headers) {
-  $.ajax({
-    type: type,
-    url: url,
-    timeout: ladybug.timeout,
-    data: params,
-    dataType: 'json',
-    headers: headers
-  }).done(function(data, textStatus, jqXHR) {
-    postMessage({ message: 'response', id: id, data: data, textStatus: textStatus, jqXHR: jqXHR });
-  }).fail(function(jqXHR, textStatus) {
-    postMessage({ message: 'response', id: id, jqXHR: jqXHR, textStatus: textStatus });
-  });
+function send(id, method, url, params, headers) {
+  var xhr = new XMLHttpRequest();
+
+  if (params && (method == 'GET' || method == 'DELETE')) {
+    url += '?' + param(params);
+  }
+
+  xhr.open(method, url, true);
+  xhr.onload = function() {
+    var data = null;
+    var type = this.getResponseHeader('content-type');
+    if (type == 'application/json') data = JSON.parse(this.responseText);
+    var response = {
+      status: this.status,
+      statusText: this.statusText,
+      responseText: this.responseText,
+      data: data
+    };
+    postMessage({ message: 'response', id: id, response: response });
+  };
+
+  if (params && (method == 'POST' || method == 'PUT')) {
+    xhr.send(JSON.stringify(params));
+  } else {
+    xhr.send();
+  }
+}
+
+function param(obj) {
+  var result = '';
+  for (var prop in obj) {
+    if (result.length > 0) {
+      result += '&';
+    }
+    result += encodeURI(prop + '=' + obj[prop]);
+  }
+  return result;
 }
 
 function postMessage(msg) {
-  // TODO stringify really necessary? DOM error 25 when sending some messages.
-  webkit.messageHandlers.interOp.postMessage(JSON.stringify(msg));
+  webkit.messageHandlers.interOp.postMessage(msg);
 }

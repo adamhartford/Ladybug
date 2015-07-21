@@ -178,7 +178,6 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
             let bundle = NSBundle.mainBundle()
         #endif
         
-        let jqueryURL = bundle.URLForResource("jquery-2.1.3.min", withExtension: "js")!
         let jsURL = bundle.URLForResource("Ladybug", withExtension: "js")!
         
         // Loading file:// URLs from NSTemporaryDirectory() works on iOS, not OS X.
@@ -186,30 +185,19 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         
         #if os(iOS)
             let temp = NSURL(fileURLWithPath: NSTemporaryDirectory())!
-            let jqueryTempURL = temp.URLByAppendingPathComponent("jquery-2.1.3.min.js")
             let jsTempURL = temp.URLByAppendingPathComponent("Ladybug.js")
             
             let fileManager = NSFileManager.defaultManager()
-            fileManager.removeItemAtURL(jqueryTempURL, error: nil)
             fileManager.removeItemAtURL(jsTempURL, error: nil)
             
-            fileManager.copyItemAtURL(jqueryURL, toURL: jqueryTempURL, error: nil)
             fileManager.copyItemAtURL(jsURL, toURL: jsTempURL, error: nil)
-            
-            let jqueryInclude = "<script src='\(jqueryTempURL.absoluteString!)'></script>"
             let jsInclude = "<script src='\(jsTempURL.absoluteString!)'></script>"
         #else
-            let jqueryString = NSString(contentsOfURL: jqueryURL, encoding: NSUTF8StringEncoding, error: nil)!
             let jsString = NSString(contentsOfURL: jsURL, encoding: NSUTF8StringEncoding, error: nil)!
-            
-            let jqueryInclude = "<script>\(jqueryString)</script>"
             let jsInclude = "<script>\(jsString)</script>"
         #endif
         
-        let html = "<!doctype html><html><head></head><body>"
-            + "\(jqueryInclude)\(jsInclude))"
-            + "</body></html>"
-        
+        let html = "<!doctype html><html><head></head><body>\(jsInclude))</body></html>"
         webView.loadHTMLString(html, baseURL: bundle.bundleURL)
     }
     
@@ -230,7 +218,7 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         }
         
         // Cache
-        if !Ladybug.cache && (request.method == .GET || request.method == .DELETE) {
+        if !Ladybug.cache && request.method == .GET {
             let ms = Int64(NSDate().timeIntervalSince1970 * 1000)
             if request.parameters != nil {
                 request.parameters!["_"] = "\(ms)"
@@ -255,7 +243,7 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         #if os(iOS)
             UIApplication.sharedApplication().networkActivityIndicatorVisible = true
         #endif
-        webView.evaluateJavaScript("sendRequest('\(request.id)', '\(request.method.stringValue)', '\(request.url)', \(data), \(headers))", completionHandler: nil)
+        webView.evaluateJavaScript("send('\(request.id)', '\(request.method.stringValue)', '\(request.url)', \(data), \(headers))", completionHandler: nil)
     }
     
     func jsonStringFromObject(obj: AnyObject?) -> String? {
@@ -291,8 +279,8 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     // MARK: - WKScriptMessageHandler
     
     func userContentController(userContentController: WKUserContentController, didReceiveScriptMessage message: WKScriptMessage) {
-        //let json = message.body as! [String: AnyObject]
-        let json: AnyObject = jsonObjectFromString(message.body as! String)!
+        let json = message.body as! [String: AnyObject]
+        //let json: AnyObject = jsonObjectFromString(message.body as! String)!
         let msg = json["message"] as! String
         
         switch msg {
@@ -307,18 +295,17 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
             pendingRequests.removeAll(keepCapacity: false)
         case "response":
             let request = processingRequests[json["id"] as! String]!
-            let xhr: AnyObject = json["jqXHR"] as AnyObject!
-            let status = xhr["status"] as! Int
+            let res: AnyObject = json["response"] as AnyObject!
+            let status = res["status"] as! Int
             let success = status == 200 || status == 201
             
             let response = Response(request: request,
                 success: success,
                 error: !success,
-                readyState: xhr["readyState"] as! Int,
-                responseText: xhr["responseText"] as? String,
+                responseText: res["responseText"] as? String,
                 status: status,
-                statusText: xhr["statusText"] as! String,
-                data: json["data"])
+                statusText: res["statusText"] as! String,
+                data: res["data"])
             
             #if os(iOS)
                 UIApplication.sharedApplication().networkActivityIndicatorVisible = false
@@ -349,13 +336,13 @@ public enum HttpMethod {
     var stringValue: String {
         switch self {
         case .POST:
-            return "post"
+            return "POST"
         case .PUT:
-            return "put"
+            return "PUT"
         case .DELETE:
-            return "delete"
+            return "DELETE"
         default:
-            return "get"
+            return "GET"
         }
     }
 }
@@ -426,17 +413,15 @@ public class Response {
     public let request: Request
     public let success: Bool
     public let error: Bool
-    public let readyState: Int
     public let responseText: String?
     public let status: Int
     public let statusText: String
     public let data: AnyObject?
     
-    init (request: Request, success: Bool, error: Bool, readyState: Int, responseText: String?, status: Int, statusText: String, data: AnyObject?) {
+    init (request: Request, success: Bool, error: Bool, responseText: String?, status: Int, statusText: String, data: AnyObject?) {
         self.request = request
         self.success = success
         self.error = error
-        self.readyState = readyState
         self.responseText = responseText
         self.status = status
         self.statusText = statusText
