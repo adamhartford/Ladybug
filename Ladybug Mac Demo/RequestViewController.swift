@@ -37,7 +37,7 @@ class RequestViewController: NSViewController {
 
     @IBAction func sendGet(sender: AnyObject?) {
         Ladybug.get("/get") { [weak self] response in
-            println(response.data!)
+            println(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -45,7 +45,7 @@ class RequestViewController: NSViewController {
     @IBAction func sendGetWithParams(sender: AnyObject?) {
         let params = ["foo": "bar"]
         Ladybug.get("/get") { [weak self] response in
-            println(response.data!)
+            println(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -53,7 +53,7 @@ class RequestViewController: NSViewController {
     @IBAction func sendPost(sender: AnyObject?) {
         let params = ["foo": "bar"]
         Ladybug.post("/post", parameters: params) { [weak self] response in
-            println(response.data!)
+            println(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -61,7 +61,7 @@ class RequestViewController: NSViewController {
     @IBAction func sendPut(sender: AnyObject?) {
         let params = ["foo": "bar"]
         Ladybug.put("/put", parameters: params) { [weak self] response in
-            println(response.data!)
+            println(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -69,7 +69,7 @@ class RequestViewController: NSViewController {
     @IBAction func sendDelete(sender: AnyObject?) {
         let params = ["foo": "bar"]
         Ladybug.delete("/delete", parameters: params) { [weak self] response in
-            println(response.data!)
+            println(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }

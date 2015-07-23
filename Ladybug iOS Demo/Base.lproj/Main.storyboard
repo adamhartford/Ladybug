@@ -107,15 +107,22 @@
                                 <fontDescription key="fontDescription" name="CourierNewPSMT" family="Courier New" pointSize="14"/>
                                 <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
                             </textView>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="CIr-vG-kMg">
+                                <rect key="frame" x="0.0" y="64" width="600" height="536"/>
+                            </imageView>
                             <activityIndicatorView hidden="YES" opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" hidesWhenStopped="YES" style="gray" translatesAutoresizingMaskIntoConstraints="NO" id="ppA-kk-O6c">
                                 <rect key="frame" x="290" y="290" width="20" height="20"/>
                             </activityIndicatorView>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                         <constraints>
+                            <constraint firstAttribute="trailing" secondItem="CIr-vG-kMg" secondAttribute="trailing" id="AQp-ag-RQP"/>
                             <constraint firstItem="zgR-a8-x1m" firstAttribute="top" secondItem="5Bi-cv-wBo" secondAttribute="bottom" id="Hqe-G6-w2e"/>
+                            <constraint firstItem="zgR-a8-x1m" firstAttribute="top" secondItem="CIr-vG-kMg" secondAttribute="bottom" id="Lil-8q-Iht"/>
                             <constraint firstItem="5Bi-cv-wBo" firstAttribute="top" secondItem="Eq0-F0-x5C" secondAttribute="top" id="YLx-uv-Sx8"/>
+                            <constraint firstItem="CIr-vG-kMg" firstAttribute="leading" secondItem="Eq0-F0-x5C" secondAttribute="leading" id="bAZ-aw-sov"/>
                             <constraint firstAttribute="centerX" secondItem="ppA-kk-O6c" secondAttribute="centerX" id="eUP-g8-ejh"/>
+                            <constraint firstItem="CIr-vG-kMg" firstAttribute="top" secondItem="JsY-w1-GgK" secondAttribute="bottom" id="wFw-Po-foM"/>
                             <constraint firstAttribute="trailing" secondItem="5Bi-cv-wBo" secondAttribute="trailing" id="wJu-Ny-Nzs"/>
                             <constraint firstAttribute="centerY" secondItem="ppA-kk-O6c" secondAttribute="centerY" id="wvM-YE-7vc"/>
                             <constraint firstItem="5Bi-cv-wBo" firstAttribute="leading" secondItem="Eq0-F0-x5C" secondAttribute="leading" id="y8D-vw-mfh"/>
@@ -135,6 +142,7 @@
                     </navigationItem>
                     <connections>
                         <outlet property="activityIndicator" destination="ppA-kk-O6c" id="onP-hz-kHb"/>
+                        <outlet property="imageView" destination="CIr-vG-kMg" id="K0O-Ut-3ut"/>
                         <outlet property="textView" destination="5Bi-cv-wBo" id="jdw-xa-uUB"/>
                     </connections>
                 </viewController>

@@ -83,24 +83,24 @@ public struct Ladybug {
         }
     }
     
-    public static func get(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
-        send(stringWithLeadingSlash(url), method: .GET, parameters: parameters, headers: headers, beforeSend: beforeSend, done: done)
+    public static func get(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], responseType: ResponseType = .Text, beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
+        send(stringWithLeadingSlash(url), method: .GET, parameters: parameters, headers: headers, responseType: responseType, beforeSend: beforeSend, done: done)
     }
     
-    public static func post(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
-        send(stringWithLeadingSlash(url), method: .POST, parameters: parameters, headers: headers, beforeSend: beforeSend, done: done)
+    public static func post(url: String, parameters: [String: AnyObject]? = nil, files: [File]? = nil, headers: [String: String] = [:], responseType: ResponseType = .Text, beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
+        send(stringWithLeadingSlash(url), method: .POST, parameters: parameters, files: files, headers: headers, responseType: responseType, beforeSend: beforeSend, done: done)
     }
     
-    public static func put(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
-        send(stringWithLeadingSlash(url), method: .PUT, parameters: parameters, headers: headers, beforeSend: beforeSend, done: done)
+    public static func put(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], responseType: ResponseType = .Text, beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
+        send(stringWithLeadingSlash(url), method: .PUT, parameters: parameters, headers: headers, responseType: responseType, beforeSend: beforeSend, done: done)
     }
     
-    public static func delete(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
-        send(stringWithLeadingSlash(url), method: .DELETE, parameters: parameters, headers: headers, beforeSend: beforeSend, done: done)
+    public static func delete(url: String, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], responseType: ResponseType = .Text, beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
+        send(stringWithLeadingSlash(url), method: .DELETE, parameters: parameters, headers: headers, responseType: responseType, beforeSend: beforeSend, done: done)
     }
     
-    public static func send(url: String, method: HttpMethod, parameters: [String: AnyObject]? = nil, headers: [String: String] = [:], beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
-        Client.sharedInstance.send(Request(method: method, url: baseURL + stringWithLeadingSlash(url), parameters: parameters, headers: headers, beforeSend: beforeSend, done: done))
+    public static func send(url: String, method: HttpMethod, parameters: [String: AnyObject]? = nil, files: [File]? = nil, headers: [String: String] = [:], responseType: ResponseType = .Text, beforeSend: (Request -> ())? = nil, done: (Response -> ())? = nil) {
+        Client.sharedInstance.send(Request(method: method, url: baseURL + stringWithLeadingSlash(url), parameters: parameters, files: files, headers: headers, responseType: responseType, beforeSend: beforeSend, done: done))
     }
     
     public static func send(request: Request) {
@@ -236,6 +236,16 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
             data = jsonStringFromObject(p)!
         }
         
+        var filesJSON = "null"
+        if let files = request.files {
+            var arr = [AnyObject]()
+            for file in files {
+                arr.append(file.json)
+            }
+            filesJSON = jsonStringFromObject(arr)!
+            println(filesJSON)
+        }
+        
         var headers = jsonStringFromObject(request.headers)!
         
         let id = NSUUID().UUIDString
@@ -243,7 +253,7 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         #if os(iOS)
             UIApplication.sharedApplication().networkActivityIndicatorVisible = true
         #endif
-        webView.evaluateJavaScript("send('\(request.id)', '\(request.method.stringValue)', '\(request.url)', \(data), \(headers))", completionHandler: nil)
+        webView.evaluateJavaScript("send('\(request.id)', '\(request.method.stringValue)', '\(request.url)', \(data), \(filesJSON), \(headers), '\(request.responseType.stringValue)')", completionHandler: nil)
     }
     
     func jsonStringFromObject(obj: AnyObject?) -> String? {
@@ -297,15 +307,15 @@ class Client: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
             let request = processingRequests[json["id"] as! String]!
             let res: AnyObject = json["response"] as AnyObject!
             let status = res["status"] as! Int
-            let success = status == 200 || status == 201
+            let success = status >= 200 && status < 300
             
             let response = Response(request: request,
                 success: success,
                 error: !success,
-                responseText: res["responseText"] as? String,
                 status: status,
                 statusText: res["statusText"] as! String,
-                data: res["data"])
+                responseText: res["responseText"] as? String,
+                base64: res["base64"] as? String)
             
             #if os(iOS)
                 UIApplication.sharedApplication().networkActivityIndicatorVisible = false
@@ -347,15 +357,67 @@ public enum HttpMethod {
     }
 }
 
+public enum ResponseType {
+    case Text
+    case Binary
+    
+    var stringValue: String {
+        switch self {
+        case .Binary:
+            return "blob"
+        default:
+            return "text"
+        }
+    }
+}
+
+public struct File {
+    public let name: String
+    public let contentType: String
+    public let data: NSData?
+    public let image: Image?
+    
+    public init(name: String, image: Image, contentType: String = "application/octet-stream") {
+        self.name = name
+        self.image = image
+        self.data = nil
+        self.contentType = contentType
+    }
+    
+    public init(name: String, data: NSData, contentType: String = "application/octet-stream") {
+        self.name = name
+        self.data = data
+        self.image = nil
+        self.contentType = contentType
+    }
+    
+    public var json: [String: String] {
+        var result = ["name": name, "contentType": contentType]
+        if let d = data {
+            result["data"] = d.base64EncodedStringWithOptions(.allZeros)
+        } else if let img = image {
+            #if os(iOS)
+                result["data"] = UIImagePNGRepresentation(image).base64EncodedStringWithOptions(.allZeros)
+            #else
+                let tiff = img.TIFFRepresentation
+                let png = NSBitmapImageRep(data: tiff!)!.representationUsingType(.NSPNGFileType, properties: [:])!
+                result["data"] = png.base64EncodedStringWithOptions(.allZeros)
+            #endif
+        }
+        return result
+    }
+}
+
 public class Request: Printable {
     var id: String
     public var method: HttpMethod
     public var url: String
     public var parameters: [String: AnyObject]?
+    public var files: [File]?
     public var headers: [String: String]
+    public var responseType: ResponseType
     public var beforeSend: (Request -> ())?
     public var done: (Response -> ())?
-    public internal(set) var settings: AnyObject!
     
     public var description: String {
         get {
@@ -398,12 +460,14 @@ public class Request: Printable {
         }
     }
     
-    init(method: HttpMethod = .GET, url: String = "/", parameters: [String: AnyObject]?, headers: [String: String] = [:], beforeSend: (Request -> ())?, done: (Response -> ())?) {
+    init(method: HttpMethod = .GET, url: String = "/", parameters: [String: AnyObject]?, files: [File]?, headers: [String: String] = [:], responseType: ResponseType = .Text, beforeSend: (Request -> ())?, done: (Response -> ())?) {
         id = NSUUID().UUIDString
         self.method = method
         self.url = url
         self.parameters = parameters
+        self.files = files
         self.headers = headers
+        self.responseType = responseType
         self.beforeSend = beforeSend
         self.done = done
     }
@@ -413,18 +477,56 @@ public class Response {
     public let request: Request
     public let success: Bool
     public let error: Bool
-    public let responseText: String?
     public let status: Int
     public let statusText: String
-    public let data: AnyObject?
+    let responseText: String?
+    let base64: String?
     
-    init (request: Request, success: Bool, error: Bool, responseText: String?, status: Int, statusText: String, data: AnyObject?) {
+    public var data: NSData? {
+        if let text = responseText {
+            return text.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: false)
+        } else if let b64 = base64 {
+            return NSData(base64EncodedString: b64, options: .allZeros)
+        }
+        return nil
+    }
+    
+    public var json: AnyObject? {
+        if let jsonData = data {
+            return NSJSONSerialization.JSONObjectWithData(jsonData, options: .allZeros, error: nil)
+        }
+        return nil
+    }
+    
+    public var image: Image? {
+        if let imageData = data {
+            return Image(data: imageData)
+        }
+        return nil
+    }
+    
+    public var text: String? {
+        if let text = responseText {
+            return text
+        } else if let text = base64 {
+            return text
+        }
+        return nil
+    }
+    
+    init (request: Request, success: Bool, error: Bool, status: Int, statusText: String, responseText: String?, base64: String?) {
         self.request = request
         self.success = success
         self.error = error
-        self.responseText = responseText
         self.status = status
         self.statusText = statusText
-        self.data = data
+        self.responseText = responseText
+        self.base64 = base64
     }
 }
+
+#if os(iOS)
+    public typealias Image = UIImage
+    #else
+    public typealias Image = NSImage
+#endif

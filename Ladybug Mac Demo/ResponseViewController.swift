@@ -18,7 +18,7 @@ class ResponseViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        textView.string = response.responseText
+        textView.string = response.text
     }
     
     @IBAction func refresh(sender: AnyObject?) {
@@ -27,8 +27,8 @@ class ResponseViewController: NSViewController {
         
         let request = response.request
         request.done = { [weak self] res in
-            println(res.data!)
-            self?.textView.string = res.responseText
+            println(res.json!)
+            self?.textView.string = res.text
             self?.progressIndicator.stopAnimation(nil)
         }
         Ladybug.send(request)
