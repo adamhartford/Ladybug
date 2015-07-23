@@ -9,12 +9,37 @@ Supports `GET`, `POST`, `PUT`, and `DELETE`. Request body is sent as JSON.
 Ladybug.baseURL = "http://httpbin.org"
   
 Ladybug.get("/get") { response in
-  println(response.data!)
+  println(response.json!)
 }
   
 let params = ["foo": "bar"]
 Ladybug.post("/post", parameters: parameters) { response in
-  println(response.data!)
+  println(response.json!)
+}
+```
+
+#### Multipart Form Data
+
+```swift
+let params = ["foo": "bar"]
+
+let files = [
+  File(name: "myfile1", image: UIImage(named: "img1")!),
+  File(name: "myfile2", image: UIImage(named: "img2")!)
+]
+        
+Ladybug.post("/post", parameters: params, files: files) { response in
+  println(response.text!)
+}
+```
+
+#### Blob Responses
+
+```swift
+Ladybug.get("/image") { response in
+  let image = response.image!
+  // or...
+  let data = response.data!
 }
 ```
 
@@ -31,7 +56,7 @@ Set custom headers per request:
 ```swift
 let headers = ["X-MyHeader1": "Value1", "X-MyHeader2": "Value2"]
 Ladybug.get("/get", headers: headers) { response in
-  println(response.data!)
+  println(response.json!)
 }
 ```
 
@@ -49,7 +74,7 @@ Before a single request is sent:
 Ladybug.get("/get", beforeSend: request in {
   println(request)
 }) { response in {
-  println(response.data!)
+  println(response.json!)
 }
 ```
 
