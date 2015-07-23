@@ -13,7 +13,7 @@ Ladybug.get("/get") { response in
 }
   
 let params = ["foo": "bar"]
-Ladybug.post("/post", parameters: parameters) { response in
+Ladybug.post("/post", parameters: params) { response in
   println(response.json!)
 }
 ```
