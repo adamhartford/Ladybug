@@ -88,7 +88,12 @@ class Client {
     let session: NSURLSession = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration())
     
     func send(request: Request) {
-        let url = NSURL(string: request.url)!
+        var urlString = request.url
+        if request.method == .GET || request.method == .DELETE {
+            urlString += queryString(request.parameters)
+        }
+        
+        let url = NSURL(string: urlString)!
         let req = NSMutableURLRequest(URL: url)
         req.HTTPMethod = request.method.rawValue
         
@@ -100,19 +105,18 @@ class Client {
             req.setValue(value, forHTTPHeaderField: header)
         }
         
-        if let params = request.parameters {
-            if request.method == .GET || request.method == .DELETE {
-                req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: Headers.ContentType)
-                req.HTTPBody = urlEncode(params).dataUsingEncoding(NSUTF8StringEncoding)
-            } else if let httpFiles = request.files {
+        if request.method == .POST || request.method == .PUT {
+            if let httpFiles = request.files {
                 let body = NSMutableData()
                 let boundary = "--\(Constants.MultipartBoundary)\r\n".dataUsingEncoding(NSUTF8StringEncoding)!
                 
-                for (name, value) in params {
-                    body.appendData(boundary)
-                    body.appendData("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".dataUsingEncoding(NSUTF8StringEncoding)!)
-                    body.appendData(value.dataUsingEncoding(NSUTF8StringEncoding)!)
-                    body.appendData("\r\n".dataUsingEncoding(NSUTF8StringEncoding)!)
+                if let params = request.parameters {
+                    for (name, value) in params {
+                        body.appendData(boundary)
+                        body.appendData("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".dataUsingEncoding(NSUTF8StringEncoding)!)
+                        body.appendData(value.dataUsingEncoding(NSUTF8StringEncoding)!)
+                        body.appendData("\r\n".dataUsingEncoding(NSUTF8StringEncoding)!)
+                    }
                 }
                 
                 for file in httpFiles {
@@ -129,7 +133,7 @@ class Client {
                 
                 req.setValue("multipart/form-data; boundary=\(Constants.MultipartBoundary)", forHTTPHeaderField: Headers.ContentType)
                 req.HTTPBody = body
-            } else {
+            } else if let params = request.parameters {
                 let json = NSJSONSerialization.dataWithJSONObject(params, options: .allZeros, error: nil)
                 req.setValue("application/json", forHTTPHeaderField: Headers.ContentType)
                 req.HTTPBody = json
@@ -159,6 +163,13 @@ class Client {
         })
         
         task.resume()
+    }
+    
+    func queryString(parameters: [String: AnyObject]?) -> String {
+        if let params = parameters {
+            return "?" + urlEncode(params)
+        }
+        return ""
     }
     
     func urlEncode(obj: AnyObject) -> String {
