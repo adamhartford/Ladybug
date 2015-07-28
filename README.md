@@ -1,5 +1,5 @@
 # Ladybug
-Swift HTTP client built on WKWebView and XHR. Just for kicks. Don't use this :)
+Yet another Swift HTTP client. Inspired by jQuery's $.ajax.
 
 ### Usage
 
@@ -24,8 +24,9 @@ Ladybug.post("/post", parameters: params) { response in
 let params = ["foo": "bar"]
 
 let files = [
-  File(name: "myfile1", image: UIImage(named: "img1")!),
-  File(name: "myfile2", image: UIImage(named: "img2")!)
+  File(image: UIImage(named: "img1")!, name: "myfile1", fileName: "myfile1.png"),
+  File(image: UIImage(named: "img2")!, name: "myfile2", fileName: "myfile2.png"),
+  File(data: someData, name: "myfile3", fileName: "myfile3.data", contentType: "application/octet-stream")
 ]
         
 Ladybug.post("/post", parameters: params, files: files) { response in
