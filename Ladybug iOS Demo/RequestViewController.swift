@@ -36,7 +36,7 @@ class RequestViewController: UITableViewController {
         tableView.deselectRowAtIndexPath(indexPath, animated: true)
         switch indexPath.row {
         case 0:
-            sendGetImage()
+            sendGet()
         case 1:
             sendPost()
         case 2:
@@ -50,6 +50,13 @@ class RequestViewController: UITableViewController {
     
     func sendGet() {
         Ladybug.get("/get") { [weak self] response in
+            println(response.json!)
+            self?.performSegueWithIdentifier("showResponse", sender: response)
+        }
+    }
+    
+    func sendGetEmoji() {
+        🐞.get("/get") { [weak self] response in
             println(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }

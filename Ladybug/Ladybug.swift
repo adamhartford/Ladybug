@@ -289,3 +289,5 @@ public enum HTTPMethod: String {
     public typealias Image = NSImage
 #endif
 
+public typealias 🐞 = Ladybug
+
