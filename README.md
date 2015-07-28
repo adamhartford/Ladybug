@@ -87,5 +87,15 @@ Ladybug.beforeSend = { request in
 }
 ```
 
+#### And, why not?
+
+This works too:
+
+```swift
+🐞.get("/get") { response in
+  println(response.json!)
+}
+```
+
 ### License
 Ladybug is released under the MIT license. See LICENSE for details.
