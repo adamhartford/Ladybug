@@ -2,7 +2,7 @@ Pod::Spec.new do |s|
   s.name = 'Ladybug'
   s.version = '0.1.0'
   s.license = { :type => 'MIT', :file => 'LICENSE' }
-  s.summary = 'Swift HTTP client built on WKWebView and XHR'
+  s.summary = 'Yet another Swift HTTP client'
   s.homepage = 'https://github.com/adamhartford/Ladybug'
   s.social_media_url = 'http://twitter.com/adamhartford'
   s.authors = { 'Adam Hartford' => 'adam@adamhartford.com' }
@@ -12,7 +12,6 @@ Pod::Spec.new do |s|
   s.osx.deployment_target = '10.10'
 
   s.source_files = 'Ladybug/*.swift'
-  s.resources = 'Ladybug/Web/*.js'
 
   s.requires_arc = true
 end
