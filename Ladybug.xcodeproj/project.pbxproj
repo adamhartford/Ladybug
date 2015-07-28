@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5B7200611B557D6400D49172 /* Ladybug.js in Resources */ = {isa = PBXBuildFile; fileRef = 5B72005E1B557D6400D49172 /* Ladybug.js */; };
-		5B7200621B557D6400D49172 /* Ladybug.js in Resources */ = {isa = PBXBuildFile; fileRef = 5B72005E1B557D6400D49172 /* Ladybug.js */; };
 		5B7200641B56098900D49172 /* ResponseViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B7200631B56098900D49172 /* ResponseViewController.swift */; };
 		5BAECDC21B4E197A00A0B0B6 /* RequestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BAECDC11B4E197A00A0B0B6 /* RequestViewController.swift */; };
 		5BAECDC61B4E1A0B00A0B0B6 /* ResponseViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BAECDC51B4E1A0B00A0B0B6 /* ResponseViewController.swift */; };
@@ -94,7 +92,6 @@
 
 /* Begin PBXFileReference section */
 		5B5CB8C91ADC40E1006AE44D /* Ladybug.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Ladybug.swift; path = Ladybug/Ladybug.swift; sourceTree = "<group>"; };
-		5B72005E1B557D6400D49172 /* Ladybug.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = Ladybug.js; path = Web/Ladybug.js; sourceTree = "<group>"; };
 		5B7200631B56098900D49172 /* ResponseViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResponseViewController.swift; sourceTree = "<group>"; };
 		5BAECDC11B4E197A00A0B0B6 /* RequestViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestViewController.swift; sourceTree = "<group>"; };
 		5BAECDC51B4E1A0B00A0B0B6 /* ResponseViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResponseViewController.swift; sourceTree = "<group>"; };
@@ -203,15 +200,6 @@
 				5BD4604A1B31B3740045256C /* Ladybug MacTests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		5B5CB8EC1ADC8545006AE44D /* Web */ = {
-			isa = PBXGroup;
-			children = (
-				5B72005E1B557D6400D49172 /* Ladybug.js */,
-			);
-			name = Web;
-			path = Ladybug;
 			sourceTree = "<group>";
 		};
 		5BD45FD21B31B31A0045256C /* Ladybug iOS Demo */ = {
@@ -330,7 +318,6 @@
 		5BD4605F1B31B3E60045256C /* Ladybug */ = {
 			isa = PBXGroup;
 			children = (
-				5B5CB8EC1ADC8545006AE44D /* Web */,
 				5B5CB8C91ADC40E1006AE44D /* Ladybug.swift */,
 			);
 			name = Ladybug;
@@ -546,7 +533,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5B7200611B557D6400D49172 /* Ladybug.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -561,7 +547,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5B7200621B557D6400D49172 /* Ladybug.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

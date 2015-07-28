@@ -20,7 +20,7 @@ class ResponseViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        textView.text = response.text ?? ""
+        textView.text = response.text
         imageView.image = response.image
     }
 
@@ -31,12 +31,16 @@ class ResponseViewController: UIViewController {
     
     @IBAction func refresh(sender: AnyObject?) {
         textView.text = ""
+        imageView.image = nil
         activityIndicator.startAnimating()
         
         let request = response.request
         request.done = { [weak self] res in
-            println(res.text!)
+            if let text = res.text {
+                println(text)
+            }
             self?.textView.text = res.text
+            self?.imageView.image = res.image
             self?.activityIndicator.stopAnimating()
         }
         Ladybug.send(request)

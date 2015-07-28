@@ -23,7 +23,7 @@ class RequestViewController: UITableViewController {
         // Callback for all requests
         Ladybug.beforeSend = { req in
             req.headers["X-Bar"] = "Baz"
-            println(req)
+            //println(req)
         }
     }
 
@@ -64,8 +64,7 @@ class RequestViewController: UITableViewController {
     }
     
     func sendGetImage() {
-        Ladybug.get("/image/png", responseType: .Binary) { [weak self] response in
-            //println(response.text!)
+        Ladybug.get("/image/png") { [weak self] response in
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -81,12 +80,11 @@ class RequestViewController: UITableViewController {
     func sendPostMultipart() {
         let params = ["foo": "bar"]
         let files = [
-            File(name: "mypng", image: UIImage(named: "png")!, contentType: "image/png"),
-            File(name: "myjpeg", image: UIImage(named: "jpeg")!, contentType: "image/jpeg")
+            File(image: UIImage(named: "png")!, name: "mypng", fileName: "mypng", contentType: "image/png"),
+            File(image: UIImage(named: "jpeg")!, name: "myjpeg", fileName: "myjpeg", contentType: "image/jpeg")
         ]
         
         Ladybug.post("/post", parameters: params, files: files) { [weak self] response in
-            //println(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
