@@ -14,8 +14,11 @@ class RequestViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        Ladybug.baseURL = "http://httpbin.org"
+        Ladybug.baseURL = "https://httpbin.org"
         Ladybug.setBasicAuth("SomeUser", password: "SomePassword")
+        
+        let certPath = NSBundle.mainBundle().pathForResource("httpbin.org", ofType: "cer")
+        Ladybug.enableSSLPinning(.PublicKey, filePath: certPath!, host: "httpbin.org")
 
         // Add header for all requests
         Ladybug.additionalHeaders["X-Foo"] = "Bar"

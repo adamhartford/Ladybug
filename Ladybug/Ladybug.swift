@@ -19,6 +19,8 @@ public struct Ladybug {
     public static var beforeSend: (Request -> ())?
     public static var done: (Response -> ())?
     
+    static var sslPinning: [String: SSLPinningConfig] = [:]
+    
     public static func get(url: String,
         headers: [String: String] = [:],
         parameters: [String: AnyObject]? = nil,
@@ -79,13 +81,21 @@ public struct Ladybug {
         let base64String = plainData?.base64EncodedStringWithOptions(.allZeros)
         additionalHeaders[Headers.Authorization] = "Basic \(base64String!)"
     }
+    
+    public static func enableSSLPinning(type: SSLPinningType, filePath: String, host: String) {
+        sslPinning[host] = SSLPinningConfig(type: type, filePath: filePath)
+    }
+    
+    public static func disableSSLPinning(host: String) {
+        sslPinning.removeValueForKey(host)
+    }
 }
 
 class Client {
     static let sharedInstance = Client()
     private init() {}
     
-    let session: NSURLSession = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration())
+    let session: NSURLSession = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: LadybugDelegate(), delegateQueue: nil)
     
     func send(request: Request) {
         var urlString = request.url
@@ -215,6 +225,57 @@ public class Request {
     }
 }
 
+class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
+    func URLSession(session: NSURLSession,
+        task: NSURLSessionTask,
+        didReceiveChallenge challenge: NSURLAuthenticationChallenge,
+        completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
+            
+            let serverTrust = challenge.protectionSpace.serverTrust
+            var allow = false
+            
+            if let config = Ladybug.sslPinning[task.originalRequest.URL!.host!] {
+                let certificate = SecTrustGetCertificateAtIndex(serverTrust, 0).takeRetainedValue()
+                let remoteCertData: NSData = SecCertificateCopyData(certificate).takeRetainedValue()
+                
+                if let let pinnedCertData = NSData(contentsOfFile: config.filePath) {
+                    switch config.type {
+                    case .Certificate:
+                        allow = remoteCertData.isEqualToData(pinnedCertData)
+                    case .PublicKey:
+                        let pinnedCert = SecCertificateCreateWithData(kCFAllocatorDefault, pinnedCertData).takeRetainedValue()
+                        let pinnedPublicKey: AnyObject  = publicKey(pinnedCert) as! AnyObject
+                        let remotePublicKey: AnyObject = publicKey(certificate) as! AnyObject
+                        allow = pinnedPublicKey.isEqual(remotePublicKey)
+                    default:
+                        break
+                    }
+                }
+            }
+            
+            if allow {
+                completionHandler(.UseCredential, NSURLCredential(trust: serverTrust))
+            } else {
+                println("Invalid SSL certificate for host: \(task.originalRequest.URL!.host!)")
+                #if os(iOS)
+                    UIApplication.sharedApplication().networkActivityIndicatorVisible = false
+                #endif
+            }
+    }
+    
+    func publicKey(cert: SecCertificate) -> SecKeyRef? {
+        let policy = SecPolicyCreateBasicX509().takeRetainedValue()
+        var expTrust: Unmanaged<SecTrust>?
+        SecTrustCreateWithCertificates(cert, policy, &expTrust)
+        if let trust = expTrust?.takeRetainedValue() {
+            var result: SecTrustResultType = 0
+            SecTrustEvaluate(trust, &result)
+            return SecTrustCopyPublicKey(trust).takeRetainedValue()
+        }
+        return nil
+    }
+}
+
 public class Response {
     public let status: Int
     public let data: NSData?
@@ -285,6 +346,17 @@ struct Headers {
 
 struct Constants {
     static let MultipartBoundary = "LaDyBuGhTtPcLiEnT5239284"
+    static let LadybugURLProperty = "LadybugURLProperty"
+}
+
+public enum SSLPinningType {
+    case Certificate
+    case PublicKey
+}
+
+struct SSLPinningConfig {
+    let type: SSLPinningType
+    let filePath: String
 }
 
 public enum HTTPMethod: String {

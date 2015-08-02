@@ -32,6 +32,8 @@
 		5BD4608C1B31E8D90045256C /* Ladybug.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD4601B1B31B3620045256C /* Ladybug.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5BE94E7C1B3450E200221267 /* Ladybug.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD460401B31B3740045256C /* Ladybug.framework */; };
 		5BE94E7D1B3450E200221267 /* Ladybug.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD460401B31B3740045256C /* Ladybug.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		5BEF8DA51B6BD16B00AC2EEC /* httpbin.org.cer in Resources */ = {isa = PBXBuildFile; fileRef = 5BEF8DA41B6BD16B00AC2EEC /* httpbin.org.cer */; };
+		5BEF8DA61B6BD16B00AC2EEC /* httpbin.org.cer in Resources */ = {isa = PBXBuildFile; fileRef = 5BEF8DA41B6BD16B00AC2EEC /* httpbin.org.cer */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -121,6 +123,7 @@
 		5BD460531B31B3740045256C /* Ladybug_MacTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ladybug_MacTests.swift; sourceTree = "<group>"; };
 		5BD460661B31B5790045256C /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		5BD460681B31B57F0045256C /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk/System/Library/Frameworks/WebKit.framework; sourceTree = DEVELOPER_DIR; };
+		5BEF8DA41B6BD16B00AC2EEC /* httpbin.org.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = httpbin.org.cer; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -178,6 +181,7 @@
 		5B5CB8961ADC3C53006AE44D = {
 			isa = PBXGroup;
 			children = (
+				5BEF8DA31B6BD14800AC2EEC /* Demo Shared */,
 				5BD4605F1B31B3E60045256C /* Ladybug */,
 				5BD45FD21B31B31A0045256C /* Ladybug iOS Demo */,
 				5BD45FF81B31B3290045256C /* Ladybug Mac Demo */,
@@ -321,6 +325,14 @@
 				5B5CB8C91ADC40E1006AE44D /* Ladybug.swift */,
 			);
 			name = Ladybug;
+			sourceTree = "<group>";
+		};
+		5BEF8DA31B6BD14800AC2EEC /* Demo Shared */ = {
+			isa = PBXGroup;
+			children = (
+				5BEF8DA41B6BD16B00AC2EEC /* httpbin.org.cer */,
+			);
+			name = "Demo Shared";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -516,6 +528,7 @@
 			files = (
 				5BD45FDB1B31B31A0045256C /* Main.storyboard in Resources */,
 				5BD45FE01B31B31A0045256C /* LaunchScreen.xib in Resources */,
+				5BEF8DA51B6BD16B00AC2EEC /* httpbin.org.cer in Resources */,
 				5BD45FDD1B31B31A0045256C /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -525,6 +538,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5BD460001B31B3290045256C /* Images.xcassets in Resources */,
+				5BEF8DA61B6BD16B00AC2EEC /* httpbin.org.cer in Resources */,
 				5BD460031B31B3290045256C /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
