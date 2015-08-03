@@ -18,6 +18,7 @@ public struct Ladybug {
     public static var additionalHeaders: [String: String] = [:]
     public static var beforeSend: (Request -> ())?
     public static var done: (Response -> ())?
+    public static var allowInvalidCertificates = false
     
     static var sslPinning: [String: SSLPinningConfig] = [:]
     
@@ -232,7 +233,7 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
         completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
             
             let serverTrust = challenge.protectionSpace.serverTrust
-            var allow = false
+            var allow: Bool?
             
             if let config = Ladybug.sslPinning[task.originalRequest.URL!.host!] {
                 let certificate = SecTrustGetCertificateAtIndex(serverTrust, 0).takeRetainedValue()
@@ -253,13 +254,19 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
                 }
             }
             
-            if allow {
+            if Ladybug.allowInvalidCertificates {
                 completionHandler(.UseCredential, NSURLCredential(trust: serverTrust))
+            } else if let proceed = allow {
+                if proceed {
+                    completionHandler(.UseCredential, NSURLCredential(trust: serverTrust))
+                } else {
+                    println("Invalid SSL certificate for host: \(task.originalRequest.URL!.host!)")
+                    #if os(iOS)
+                        UIApplication.sharedApplication().networkActivityIndicatorVisible = false
+                    #endif
+                }
             } else {
-                println("Invalid SSL certificate for host: \(task.originalRequest.URL!.host!)")
-                #if os(iOS)
-                    UIApplication.sharedApplication().networkActivityIndicatorVisible = false
-                #endif
+                completionHandler(.PerformDefaultHandling, nil)
             }
     }
     
