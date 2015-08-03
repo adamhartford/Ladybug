@@ -67,6 +67,17 @@ Or globally for all requests:
 Ladybug.additionalHeaders = ["X-MyHeader": "Value"]
 ````
 
+#### SSL
+
+Ladybug supports both certificate and public key pinning per host. You must provide the path to the certificate in your app bundle. For example:
+
+```swift
+let certPath = NSBundle.mainBundle().pathForResource("httpbin.org", ofType: "cer")
+
+Ladybug.enableSSLPinning(.Certificate, filePath: certPath: host: "httpbin.org")
+Ladybug.enableSSLPinning(.PublicKey, filePath: certPath!, host: "httpbin.org")
+```
+
 #### Events
 
 Before a single request is sent:
