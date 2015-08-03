@@ -74,8 +74,15 @@ Ladybug supports both certificate and public key pinning per host. You must prov
 ```swift
 let certPath = NSBundle.mainBundle().pathForResource("httpbin.org", ofType: "cer")
 
-Ladybug.enableSSLPinning(.Certificate, filePath: certPath: host: "httpbin.org")
+Ladybug.enableSSLPinning(.Certificate, filePath: certPath!, host: "httpbin.org")
+// or
 Ladybug.enableSSLPinning(.PublicKey, filePath: certPath!, host: "httpbin.org")
+```
+
+You can also allow invalid/self-signed certificates if you wish:
+
+```swift
+Ladybug.allowInvalidCertificates = true
 ```
 
 #### Events
