@@ -44,10 +44,13 @@ Ladybug.get("/image") { response in
 }
 ```
 
-#### Basic Authentication
+#### Authentication
 
 ```swift
-Ladybug.setBasicAuth("SomeUser", password: "SomePassword")
+let credential = NSURLCredential(user: "user", password: "passwd", persistence: .Permanent)
+Ladybug.get("/auth/login", credential: credential) { response in
+  ...
+}
 ```
 
 #### Headers
