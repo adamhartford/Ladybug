@@ -171,14 +171,17 @@ class Client {
             Ladybug.pendingRequests[request.id] = nil
             NSURLProtocol.removePropertyForKey(Constants.LadybugURLProperty, inRequest: req)
             
+            let res: Response
             if let httpResponse = response as? NSHTTPURLResponse {
-                let res = Response(status: httpResponse.statusCode, data: data, request: request)
-                
-                dispatch_async(dispatch_get_main_queue(), {
-                    request.done?(res)
-                    Ladybug.done?(res)
-                })
+                res = Response(status: httpResponse.statusCode, data: data, request: request, error: error)
+            } else {
+                res = Response(request: request, error: error)
             }
+            
+            dispatch_async(dispatch_get_main_queue(), {
+                request.done?(res)
+                Ladybug.done?(res)
+            })
         })
         
         task.resume()
@@ -257,7 +260,7 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
             var allow: Bool?
             
             if challenge.previousFailureCount > 0 {
-                completionHandler(NSURLSessionAuthChallengeDisposition.CancelAuthenticationChallenge, nil)
+                completionHandler(.RejectProtectionSpace, nil)
                 return
             }
             
@@ -316,6 +319,7 @@ public class Response {
     public let status: Int
     public let data: NSData?
     public let request: Request
+    public let error: NSError?
     
     public var text: String? {
         if let textData = data {
@@ -338,10 +342,11 @@ public class Response {
         return nil
     }
     
-    init(status: Int, data: NSData?, request: Request) {
+    init(status: Int = 0, data: NSData? = nil, request: Request, error: NSError? = nil) {
         self.status = status
         self.data = data
         self.request = request
+        self.error = error
     }
 }
 
