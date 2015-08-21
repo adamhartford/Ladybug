@@ -85,10 +85,6 @@ public struct Ladybug {
         Client.sharedInstance.send(request)
     }
     
-    public static func setBasicAuthentication(user: String, password: String, realm: String? = nil) {
-
-    }
-    
     public static func enableSSLPinning(type: SSLPinningType, filePath: String, host: String) {
         sslPinning[host] = SSLPinningConfig(type: type, filePath: filePath)
     }
