@@ -52,14 +52,14 @@ class RequestViewController: UITableViewController {
     
     func sendGet() {
         Ladybug.get("/get") { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
     
     func sendGetBasicAuth() {
         Ladybug.get("/basic-auth/user/passwd") { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -67,14 +67,14 @@ class RequestViewController: UITableViewController {
     func sendGetBasicAuthWithCredential() {
         let credential = NSURLCredential(user: "user", password: "passwd", persistence: .Permanent)
         Ladybug.get("/basic-auth/user/passwd", credential: credential) { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
     
     func sendGetEmoji() {
         🐞.get("/get") { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -82,7 +82,7 @@ class RequestViewController: UITableViewController {
     func sendGetWithParams() {
         let params = ["foo": "bar"]
         Ladybug.get("/get", parameters: params) { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -96,7 +96,7 @@ class RequestViewController: UITableViewController {
     func sendPost() {
         let params = ["foo": "bar"]
         Ladybug.post("/post", parameters: params) { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -116,7 +116,7 @@ class RequestViewController: UITableViewController {
     func sendPut() {
         let params = ["foo": "bar"]
         Ladybug.put("/put", parameters: params) { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -124,7 +124,7 @@ class RequestViewController: UITableViewController {
     func sendDelete() {
         let params = ["foo": "bar"]
         Ladybug.delete("/delete", parameters: params) { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -134,7 +134,8 @@ class RequestViewController: UITableViewController {
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         let response = sender as! Response
-        let controller = segue.destinationViewController.topViewController as! ResponseViewController
+        let nav = segue.destinationViewController as! UINavigationController
+        let controller = nav.topViewController as! ResponseViewController
         controller.response = response
         if segue.identifier == "showResponseImage" {
             controller.image = response.image

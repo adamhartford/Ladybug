@@ -147,7 +147,7 @@ class Client {
                 req.setValue("multipart/form-data; boundary=\(Constants.MultipartBoundary)", forHTTPHeaderField: Headers.ContentType)
                 req.HTTPBody = body
             } else if let params = request.parameters {
-                let json = NSJSONSerialization.dataWithJSONObject(params, options: .allZeros, error: nil)
+                let json = try? NSJSONSerialization.dataWithJSONObject(params, options: [])
                 req.setValue("application/json", forHTTPHeaderField: Headers.ContentType)
                 req.HTTPBody = json
             }
@@ -163,7 +163,7 @@ class Client {
             UIApplication.sharedApplication().networkActivityIndicatorVisible = true
         #endif
         
-        let task = session.dataTaskWithRequest(req, completionHandler: { [weak self] (data, response, error) in
+        let task = session.dataTaskWithRequest(req, completionHandler: { (data, response, error) in
             #if os(iOS)
                 UIApplication.sharedApplication().networkActivityIndicatorVisible = false
             #endif
@@ -251,12 +251,12 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
     func URLSession(session: NSURLSession,
         task: NSURLSessionTask,
         didReceiveChallenge challenge: NSURLAuthenticationChallenge,
-        completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
+        completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential?) -> Void) {
             
-            let id = NSURLProtocol.propertyForKey(Constants.LadybugURLProperty, inRequest: task.originalRequest) as! String
+            let id = NSURLProtocol.propertyForKey(Constants.LadybugURLProperty, inRequest: task.originalRequest!) as! String
             let req = Ladybug.pendingRequests[id]
             
-            let serverTrust = challenge.protectionSpace.serverTrust
+            let serverTrust = challenge.protectionSpace.serverTrust!
             var allow: Bool?
             
             if challenge.previousFailureCount > 0 {
@@ -264,21 +264,19 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
                 return
             }
             
-            if let config = Ladybug.sslPinning[task.originalRequest.URL!.host!] {
-                let certificate = SecTrustGetCertificateAtIndex(serverTrust, 0).takeRetainedValue()
-                let remoteCertData: NSData = SecCertificateCopyData(certificate).takeRetainedValue()
+            if let config = Ladybug.sslPinning[task.originalRequest!.URL!.host!] {
+                let certificate = SecTrustGetCertificateAtIndex(serverTrust, 0)!
+                let remoteCertData: NSData = SecCertificateCopyData(certificate)
                 
-                if let let pinnedCertData = NSData(contentsOfFile: config.filePath) {
+                if let pinnedCertData = NSData(contentsOfFile: config.filePath) {
                     switch config.type {
                     case .Certificate:
                         allow = remoteCertData.isEqualToData(pinnedCertData)
                     case .PublicKey:
-                        let pinnedCert = SecCertificateCreateWithData(kCFAllocatorDefault, pinnedCertData).takeRetainedValue()
+                        let pinnedCert = SecCertificateCreateWithData(kCFAllocatorDefault, pinnedCertData)!
                         let pinnedPublicKey: AnyObject  = publicKey(pinnedCert) as! AnyObject
                         let remotePublicKey: AnyObject = publicKey(certificate) as! AnyObject
                         allow = pinnedPublicKey.isEqual(remotePublicKey)
-                    default:
-                        break
                     }
                 }
             }
@@ -289,7 +287,7 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
                 if proceed {
                     completionHandler(.UseCredential, NSURLCredential(trust: serverTrust))
                 } else {
-                    println("Invalid SSL certificate for host: \(task.originalRequest.URL!.host!)")
+                    print("Invalid SSL certificate for host: \(task.originalRequest!.URL!.host!)")
                     #if os(iOS)
                         UIApplication.sharedApplication().networkActivityIndicatorVisible = false
                     #endif
@@ -303,13 +301,13 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
     }
     
     func publicKey(cert: SecCertificate) -> SecKeyRef? {
-        let policy = SecPolicyCreateBasicX509().takeRetainedValue()
-        var expTrust: Unmanaged<SecTrust>?
+        let policy = SecPolicyCreateBasicX509()
+        var expTrust: SecTrust?
         SecTrustCreateWithCertificates(cert, policy, &expTrust)
-        if let trust = expTrust?.takeRetainedValue() {
+        if let trust = expTrust {
             var result: SecTrustResultType = 0
             SecTrustEvaluate(trust, &result)
-            return SecTrustCopyPublicKey(trust).takeRetainedValue()
+            return SecTrustCopyPublicKey(trust)
         }
         return nil
     }
@@ -330,7 +328,7 @@ public class Response {
     
     public var json: AnyObject? {
         if let jsonData = data {
-            return NSJSONSerialization.JSONObjectWithData(jsonData, options: .allZeros, error: nil)
+            return try? NSJSONSerialization.JSONObjectWithData(jsonData, options: [])
         }
         return nil
     }
@@ -362,7 +360,7 @@ public struct File {
     
     public init(image: Image, name: String, fileName: String, contentType: String = "application/octet-stream") {
         #if os(iOS)
-            self.data = UIImagePNGRepresentation(image)
+            self.data = UIImagePNGRepresentation(image)!
         #else
             let tiff = image.TIFFRepresentation
             self.data = NSBitmapImageRep(data: tiff!)!.representationUsingType(.NSPNGFileType, properties: [:])!

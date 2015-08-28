@@ -37,7 +37,7 @@ class ResponseViewController: UIViewController {
         let request = response.request
         request.done = { [weak self] res in
             if let text = res.text {
-                println(text)
+                print(text)
             }
             self?.textView.text = res.text
             self?.imageView.image = res.image
