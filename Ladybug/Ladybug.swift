@@ -21,16 +21,19 @@ public struct Ladybug {
     public static var allowInvalidCertificates = false
     
     static var sslPinning: [String: SSLPinningConfig] = [:]
+    static var pendingRequests = [String: Request]()
     
     public static func get(url: String,
         headers: [String: String] = [:],
         parameters: [String: AnyObject]? = nil,
+        credential: NSURLCredential? = nil,
         done: (Response -> ())? = nil) {
             
             Client.sharedInstance.send(Request(url: baseURL + url,
                 method: .GET,
                 headers: headers,
                 parameters: parameters,
+                credential: credential,
                 done: done))
     }
     
@@ -38,6 +41,7 @@ public struct Ladybug {
         headers: [String: String] = [:],
         parameters: [String: AnyObject]? = nil,
         files: [File]? = nil,
+        credential: NSURLCredential? = nil,
         done: (Response -> ())? = nil) {
             
             Client.sharedInstance.send(Request(url: baseURL + url,
@@ -45,42 +49,40 @@ public struct Ladybug {
                 headers: headers,
                 parameters: parameters,
                 files: files,
+                credential: credential,
                 done: done))
     }
     
     public static func put(url: String,
         headers: [String: String] = [:],
         parameters: [String: AnyObject]? = nil,
+        credential: NSURLCredential? = nil,
         done: (Response -> ())? = nil) {
             
             Client.sharedInstance.send(Request(url: baseURL + url,
                 method: .PUT,
                 headers: headers,
                 parameters: parameters,
+                credential: credential,
                 done: done))
     }
     
     public static func delete(url: String,
         headers: [String: String] = [:],
         parameters: [String: AnyObject]? = nil,
+        credential: NSURLCredential? = nil,
         done: (Response -> ())? = nil) {
             
             Client.sharedInstance.send(Request(url: baseURL + url,
                 method: .DELETE,
                 headers: headers,
                 parameters: parameters,
+                credential: credential,
                 done: done))
     }
     
     public static func send(request: Request) {
         Client.sharedInstance.send(request)
-    }
-    
-    public static func setBasicAuth(username: String, password: String) {
-        let plainString = "\(username):\(password)" as NSString
-        let plainData = plainString.dataUsingEncoding(NSUTF8StringEncoding)
-        let base64String = plainData?.base64EncodedStringWithOptions(.allZeros)
-        additionalHeaders[Headers.Authorization] = "Basic \(base64String!)"
     }
     
     public static func enableSSLPinning(type: SSLPinningType, filePath: String, host: String) {
@@ -154,6 +156,9 @@ class Client {
         request.beforeSend?(request)
         Ladybug.beforeSend?(request)
         
+        Ladybug.pendingRequests[request.id] = request
+        NSURLProtocol.setProperty(request.id, forKey: Constants.LadybugURLProperty, inRequest: req)
+        
         #if os(iOS)
             UIApplication.sharedApplication().networkActivityIndicatorVisible = true
         #endif
@@ -163,14 +168,20 @@ class Client {
                 UIApplication.sharedApplication().networkActivityIndicatorVisible = false
             #endif
             
+            Ladybug.pendingRequests[request.id] = nil
+            NSURLProtocol.removePropertyForKey(Constants.LadybugURLProperty, inRequest: req)
+            
+            let res: Response
             if let httpResponse = response as? NSHTTPURLResponse {
-                let res = Response(status: httpResponse.statusCode, data: data, request: request)
-                
-                dispatch_async(dispatch_get_main_queue(), {
-                    request.done?(res)
-                    Ladybug.done?(res)
-                })
+                res = Response(status: httpResponse.statusCode, data: data, request: request, error: error)
+            } else {
+                res = Response(request: request, error: error)
             }
+            
+            dispatch_async(dispatch_get_main_queue(), {
+                request.done?(res)
+                Ladybug.done?(res)
+            })
         })
         
         task.resume()
@@ -199,12 +210,15 @@ class Client {
     }
 }
 
-public class Request {
+public class Request: Equatable {
+    let id: String!
+    
     public var url: String
     public var method: HTTPMethod
     public var headers: [String: String]
     public var parameters: [String: AnyObject]?
     public var files: [File]?
+    public var credential: NSURLCredential?
     public var beforeSend: (Request -> ())?
     public var done: (Response -> ())?
     
@@ -213,17 +227,24 @@ public class Request {
         headers: [String: String] = [:],
         parameters: [String: AnyObject]? = nil,
         files: [File]? = nil,
+        credential: NSURLCredential? = nil,
         beforeSend: (Request -> ())? = nil,
         done: (Response -> ())? = nil) {
             
+            self.id = NSUUID().UUIDString
             self.url = url
             self.method = method
             self.headers = headers
             self.parameters = parameters
             self.files = files
+            self.credential = credential
             self.beforeSend = beforeSend
             self.done = done
     }
+}
+
+public func == (lhs: Request, rhs: Request) -> Bool {
+    return lhs.id == rhs.id
 }
 
 class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
@@ -232,8 +253,16 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
         didReceiveChallenge challenge: NSURLAuthenticationChallenge,
         completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
             
+            let id = NSURLProtocol.propertyForKey(Constants.LadybugURLProperty, inRequest: task.originalRequest) as! String
+            let req = Ladybug.pendingRequests[id]
+            
             let serverTrust = challenge.protectionSpace.serverTrust
             var allow: Bool?
+            
+            if challenge.previousFailureCount > 0 {
+                completionHandler(.RejectProtectionSpace, nil)
+                return
+            }
             
             if let config = Ladybug.sslPinning[task.originalRequest.URL!.host!] {
                 let certificate = SecTrustGetCertificateAtIndex(serverTrust, 0).takeRetainedValue()
@@ -264,7 +293,10 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
                     #if os(iOS)
                         UIApplication.sharedApplication().networkActivityIndicatorVisible = false
                     #endif
+                    // TODO cancel?
                 }
+            } else if let credential = req?.credential {
+                completionHandler(.UseCredential, credential)
             } else {
                 completionHandler(.PerformDefaultHandling, nil)
             }
@@ -287,6 +319,7 @@ public class Response {
     public let status: Int
     public let data: NSData?
     public let request: Request
+    public let error: NSError?
     
     public var text: String? {
         if let textData = data {
@@ -309,10 +342,11 @@ public class Response {
         return nil
     }
     
-    init(status: Int, data: NSData?, request: Request) {
+    init(status: Int = 0, data: NSData? = nil, request: Request, error: NSError? = nil) {
         self.status = status
         self.data = data
         self.request = request
+        self.error = error
     }
 }
 
@@ -348,7 +382,6 @@ public struct File {
 
 struct Headers {
     static let ContentType = "Content-Type"
-    static let Authorization = "Authorization"
 }
 
 struct Constants {

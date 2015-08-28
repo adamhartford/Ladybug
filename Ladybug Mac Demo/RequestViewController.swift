@@ -19,7 +19,8 @@ class RequestViewController: NSViewController {
         
         Ladybug.baseURL = "http://httpbin.org"
         
-        Ladybug.setBasicAuth("SomeUser", password: "SomePassword")
+        let certPath = NSBundle.mainBundle().pathForResource("httpbin.org", ofType: "cer")
+        Ladybug.enableSSLPinning(.PublicKey, filePath: certPath!, host: "httpbin.org")
         
         // Add header for all requests
         Ladybug.additionalHeaders["X-Foo"] = "Bar"
@@ -37,6 +38,21 @@ class RequestViewController: NSViewController {
 
     @IBAction func sendGet(sender: AnyObject?) {
         Ladybug.get("/get") { [weak self] response in
+            println(response.json!)
+            self?.performSegueWithIdentifier("showResponse", sender: response)
+        }
+    }
+    
+    func sendGetBasicAuth() {
+        Ladybug.get("/basic-auth/user/passwd") { [weak self] response in
+            println(response.json!)
+            self?.performSegueWithIdentifier("showResponse", sender: response)
+        }
+    }
+    
+    func sendGetBasicAuthWithCredential() {
+        let credential = NSURLCredential(user: "user", password: "passwd", persistence: .Permanent)
+        Ladybug.get("/basic-auth/user/passwd", credential: credential) { [weak self] response in
             println(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
