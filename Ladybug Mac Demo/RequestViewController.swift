@@ -26,9 +26,12 @@ class RequestViewController: NSViewController {
         Ladybug.additionalHeaders["X-Foo"] = "Bar"
         
         // Callback for all requests
-        Ladybug.beforeSend = { [weak self] req in
-            req.headers["X-Bar"] = "Baz"
+        Ladybug.willSend = { [weak self] req in
+            req.headers["X-WillSend"] = "Foo"
             self?.progressIndicator.startAnimation(nil)
+        }
+        Ladybug.beforeSend = { req in
+            req.setValue("Bar", forHTTPHeaderField: "X-BeforeSend")
         }
         
         Ladybug.done = { [weak self] _ in

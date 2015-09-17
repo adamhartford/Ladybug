@@ -16,7 +16,8 @@ import Foundation
 public struct Ladybug {
     public static var baseURL = ""
     public static var additionalHeaders: [String: String] = [:]
-    public static var beforeSend: (Request -> ())?
+    public static var willSend: (Request -> ())?
+    public static var beforeSend: (NSMutableURLRequest -> ())?
     public static var done: (Response -> ())?
     public static var allowInvalidCertificates = false
     
@@ -92,6 +93,28 @@ public struct Ladybug {
     public static func disableSSLPinning(host: String) {
         sslPinning.removeValueForKey(host)
     }
+    
+    public static func queryString(parameters: [String: AnyObject]?) -> String {
+        if let params = parameters {
+            return "?" + urlEncode(params)
+        }
+        return ""
+    }
+    
+    public static func urlEncode(parameters: [String: AnyObject]) -> String {
+        var result = ""
+        for (k,v) in parameters {
+            if result != "" {
+                result += "&"
+            }
+            result += urlEncode(k) + "=" + urlEncode(v)
+        }
+        return result
+    }
+    
+    public static func urlEncode(obj: AnyObject) -> String {
+        return "\(obj)".stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLQueryAllowedCharacterSet())!
+    }
 }
 
 class Client {
@@ -101,9 +124,12 @@ class Client {
     let session: NSURLSession = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: LadybugDelegate(), delegateQueue: nil)
     
     func send(request: Request) {
+        request.willSend?(request)
+        Ladybug.willSend?(request)
+        
         var urlString = request.url
         if request.method == .GET || request.method == .DELETE {
-            urlString += queryString(request.parameters)
+            urlString += Ladybug.queryString(request.parameters)
         }
         
         let url = NSURL(string: urlString)!
@@ -111,7 +137,7 @@ class Client {
         req.HTTPMethod = request.method.rawValue
         
         for (header, value) in Ladybug.additionalHeaders {
-            req.setValue(value, forHTTPHeaderField: header)
+            request.headers[header] = value
         }
         
         for (header, value) in request.headers {
@@ -153,15 +179,15 @@ class Client {
             }
         }
         
-        request.beforeSend?(request)
-        Ladybug.beforeSend?(request)
-        
         Ladybug.pendingRequests[request.id] = request
         NSURLProtocol.setProperty(request.id, forKey: Constants.LadybugURLProperty, inRequest: req)
         
         #if os(iOS)
             UIApplication.sharedApplication().networkActivityIndicatorVisible = true
         #endif
+        
+        request.beforeSend?(req)
+        Ladybug.beforeSend?(req)
         
         let task = session.dataTaskWithRequest(req, completionHandler: { [weak self] (data, response, error) in
             #if os(iOS)
@@ -186,28 +212,6 @@ class Client {
         
         task.resume()
     }
-    
-    func queryString(parameters: [String: AnyObject]?) -> String {
-        if let params = parameters {
-            return "?" + urlEncode(params)
-        }
-        return ""
-    }
-    
-    func urlEncode(obj: AnyObject) -> String {
-        return "\(obj)".stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLQueryAllowedCharacterSet())!
-    }
-    
-    func urlEncode(parameters: [String: AnyObject]) -> String {
-        var result = ""
-        for (k,v) in parameters {
-            if result != "" {
-                result += "&"
-            }
-            result += urlEncode(k) + "=" + urlEncode(v)
-        }
-        return result
-    }
 }
 
 public class Request: Equatable {
@@ -219,7 +223,8 @@ public class Request: Equatable {
     public var parameters: [String: AnyObject]?
     public var files: [File]?
     public var credential: NSURLCredential?
-    public var beforeSend: (Request -> ())?
+    public var willSend: (Request -> ())?
+    public var beforeSend: (NSMutableURLRequest -> ())?
     public var done: (Response -> ())?
     
     public init(url: String,
@@ -228,7 +233,8 @@ public class Request: Equatable {
         parameters: [String: AnyObject]? = nil,
         files: [File]? = nil,
         credential: NSURLCredential? = nil,
-        beforeSend: (Request -> ())? = nil,
+        willSend: (Request -> ())? = nil,
+        beforeSend: (NSMutableURLRequest -> ())? = nil,
         done: (Response -> ())? = nil) {
             
             self.id = NSUUID().UUIDString
@@ -238,6 +244,7 @@ public class Request: Equatable {
             self.parameters = parameters
             self.files = files
             self.credential = credential
+            self.willSend = willSend
             self.beforeSend = beforeSend
             self.done = done
     }

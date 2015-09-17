@@ -23,10 +23,13 @@ class RequestViewController: UITableViewController {
         Ladybug.additionalHeaders["X-Foo"] = "Bar"
 
         // Callback for all requests
-        Ladybug.beforeSend = { req in
-            req.headers["X-Bar"] = "Baz"
-            //println(req)
+        Ladybug.willSend = { req in
+            req.headers["X-WillSend"] = "Foo"
         }
+        Ladybug.beforeSend = { req in
+            req.setValue("Bar", forHTTPHeaderField:"X-BeforeSend")
+        }
+        
     }
 
     override func didReceiveMemoryWarning() {
