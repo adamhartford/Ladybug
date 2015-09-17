@@ -112,6 +112,7 @@ Ladybug.willSend = { request in
 }
 Ladybug.beforeSend = { request in
   request.setValue("Baz", forHTTPHeaderField: "X-Bar")
+}
 ```
 
 #### And, why not?
