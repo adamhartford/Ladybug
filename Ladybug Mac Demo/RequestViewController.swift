@@ -26,9 +26,12 @@ class RequestViewController: NSViewController {
         Ladybug.additionalHeaders["X-Foo"] = "Bar"
         
         // Callback for all requests
-        Ladybug.beforeSend = { [weak self] req in
-            req.headers["X-Bar"] = "Baz"
+        Ladybug.willSend = { [weak self] req in
+            req.headers["X-WillSend"] = "Foo"
             self?.progressIndicator.startAnimation(nil)
+        }
+        Ladybug.beforeSend = { req in
+            req.setValue("Bar", forHTTPHeaderField: "X-BeforeSend")
         }
         
         Ladybug.done = { [weak self] _ in
@@ -38,14 +41,14 @@ class RequestViewController: NSViewController {
 
     @IBAction func sendGet(sender: AnyObject?) {
         Ladybug.get("/get") { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
     
     func sendGetBasicAuth() {
         Ladybug.get("/basic-auth/user/passwd") { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -53,15 +56,15 @@ class RequestViewController: NSViewController {
     func sendGetBasicAuthWithCredential() {
         let credential = NSURLCredential(user: "user", password: "passwd", persistence: .Permanent)
         Ladybug.get("/basic-auth/user/passwd", credential: credential) { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
     
     @IBAction func sendGetWithParams(sender: AnyObject?) {
         let params = ["foo": "bar"]
-        Ladybug.get("/get") { [weak self] response in
-            println(response.json!)
+        Ladybug.get("/get", parameters: params) { [weak self] response in
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -69,7 +72,7 @@ class RequestViewController: NSViewController {
     @IBAction func sendPost(sender: AnyObject?) {
         let params = ["foo": "bar"]
         Ladybug.post("/post", parameters: params) { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -77,7 +80,7 @@ class RequestViewController: NSViewController {
     @IBAction func sendPut(sender: AnyObject?) {
         let params = ["foo": "bar"]
         Ladybug.put("/put", parameters: params) { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }
@@ -85,7 +88,7 @@ class RequestViewController: NSViewController {
     @IBAction func sendDelete(sender: AnyObject?) {
         let params = ["foo": "bar"]
         Ladybug.delete("/delete", parameters: params) { [weak self] response in
-            println(response.json!)
+            print(response.json!)
             self?.performSegueWithIdentifier("showResponse", sender: response)
         }
     }

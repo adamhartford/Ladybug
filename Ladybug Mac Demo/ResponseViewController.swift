@@ -27,7 +27,7 @@ class ResponseViewController: NSViewController {
         
         let request = response.request
         request.done = { [weak self] res in
-            println(res.json!)
+            print(res.json!)
             self?.textView.string = res.text
             self?.progressIndicator.stopAnimation(nil)
         }

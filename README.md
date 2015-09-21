@@ -90,11 +90,15 @@ Ladybug.allowInvalidCertificates = true
 
 #### Events
 
+The `willSend` event allows you to modify the `Request` object before it is used to build the final `NSMutableURLRequest`. The `beforeSend` event allows you to modify the actual `NSMutableURLRequest` before it is sent.
+
 Before a single request is sent:
 
 ```swift
-Ladybug.get("/get", beforeSend: request in {
-  println(request)
+Ladybug.get("/get", willSend: request in {
+  println(request.url)
+}, beforeSend: request in {
+  println(request.URL!.absoluteString)
 }) { response in {
   println(response.json!)
 }
@@ -103,8 +107,11 @@ Ladybug.get("/get", beforeSend: request in {
 Or before any request is sent:
 
 ```swift
-Ladybug.beforeSend = { request in
+Ladybug.willSend = { request in
   request.headers["X-Foo"] = "Bar"
+}
+Ladybug.beforeSend = { request in
+  request.setValue("Baz", forHTTPHeaderField: "X-Bar")
 }
 ```
 
