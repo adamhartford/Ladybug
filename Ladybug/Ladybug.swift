@@ -20,6 +20,7 @@ public struct Ladybug {
     public static var beforeSend: (NSMutableURLRequest -> ())?
     public static var done: (Response -> ())?
     public static var allowInvalidCertificates = false
+    public static var followRedirects = true
     
     static var sslPinning: [String: SSLPinningConfig] = [:]
     static var pendingRequests = [String: Request]()
@@ -255,6 +256,15 @@ public func == (lhs: Request, rhs: Request) -> Bool {
 }
 
 class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
+    
+    func URLSession(session: NSURLSession, task: NSURLSessionTask,
+        willPerformHTTPRedirection response: NSHTTPURLResponse,
+        newRequest request: NSURLRequest,
+        completionHandler: (NSURLRequest?) -> Void) {
+        
+            completionHandler(Ladybug.followRedirects ? request : nil)
+    }
+    
     func URLSession(session: NSURLSession,
         task: NSURLSessionTask,
         didReceiveChallenge challenge: NSURLAuthenticationChallenge,
@@ -318,6 +328,7 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
         }
         return nil
     }
+    
 }
 
 public class Response {
