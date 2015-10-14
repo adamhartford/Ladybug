@@ -9,12 +9,12 @@ Supports `GET`, `POST`, `PUT`, and `DELETE`. Request body is sent as JSON.
 Ladybug.baseURL = "http://httpbin.org"
   
 Ladybug.get("/get") { response in
-  println(response.json!)
+  print(response.json!)
 }
   
 let params = ["foo": "bar"]
 Ladybug.post("/post", parameters: params) { response in
-  println(response.json!)
+  print(response.json!)
 }
 ```
 
@@ -30,7 +30,7 @@ let files = [
 ]
         
 Ladybug.post("/post", parameters: params, files: files) { response in
-  println(response.text!)
+  print(response.text!)
 }
 ```
 
@@ -60,7 +60,7 @@ Set custom headers per request:
 ```swift
 let headers = ["X-MyHeader1": "Value1", "X-MyHeader2": "Value2"]
 Ladybug.get("/get", headers: headers) { response in
-  println(response.json!)
+  print(response.json!)
 }
 ```
 
@@ -96,11 +96,11 @@ Before a single request is sent:
 
 ```swift
 Ladybug.get("/get", willSend: request in {
-  println(request.url)
+  print(request.url)
 }, beforeSend: request in {
-  println(request.URL!.absoluteString)
+  print(request.URL!.absoluteString)
 }) { response in {
-  println(response.json!)
+  print(response.json!)
 }
 ```
 
@@ -121,7 +121,7 @@ This works too:
 
 ```swift
 🐞.get("/get") { response in
-  println(response.json!)
+  print(response.json!)
 }
 ```
 
