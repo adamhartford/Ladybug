@@ -21,6 +21,20 @@ public struct Ladybug {
     public static var done: (Response -> ())?
     public static var allowInvalidCertificates = false
     public static var followRedirects = true
+    public static var sendParametersAsJSON = true
+    public static var multipartFormBoundary = Constants.MultipartBoundary
+    
+    public static var timeout: NSTimeInterval {
+        set {
+            let config = NSURLSessionConfiguration.defaultSessionConfiguration()
+            config.timeoutIntervalForRequest = newValue
+            config.timeoutIntervalForResource = newValue
+            Client.sharedInstance.config = config
+        }
+        get {
+            return Client.sharedInstance.config.timeoutIntervalForRequest
+        }
+    }
     
     static var sslPinning: [String: SSLPinningConfig] = [:]
     static var pendingRequests = [String: Request]()
@@ -86,6 +100,12 @@ public struct Ladybug {
     public static func send(request: Request) {
         Client.sharedInstance.send(request)
     }
+    public static func setBasicAuth(username: String, password: String) {
+        let plainString = "\(username):\(password)" as NSString
+        let plainData = plainString.dataUsingEncoding(NSUTF8StringEncoding)
+        let base64String = plainData?.base64EncodedStringWithOptions(NSDataBase64EncodingOptions.init(rawValue: 0))
+        additionalHeaders[Headers.Authorization] = "Basic \(base64String!)"
+    }
     
     public static func enableSSLPinning(type: SSLPinningType, filePath: String, host: String) {
         sslPinning[host] = SSLPinningConfig(type: type, filePath: filePath)
@@ -108,7 +128,14 @@ public struct Ladybug {
             if result != "" {
                 result += "&"
             }
-            result += urlEncode(k) + "=" + urlEncode(v)
+            if let arr = v as? [String] {
+                for i in arr {
+                    result += urlEncode(k) + "=" + urlEncode(i) + "&"
+                }
+                result = result.substringToIndex(result.endIndex.advancedBy(-1))
+            } else {
+                result += urlEncode(k) + "=" + urlEncode(v)
+            }
         }
         return result
     }
@@ -119,18 +146,25 @@ public struct Ladybug {
 }
 
 class Client {
+    var config = NSURLSessionConfiguration.defaultSessionConfiguration()
+    let delegate = LadybugDelegate()
+    
     static let sharedInstance = Client()
     private init() {}
     
-    let session: NSURLSession = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: LadybugDelegate(), delegateQueue: nil)
-    
     func send(request: Request) {
+        let session = NSURLSession(configuration: config, delegate: delegate, delegateQueue: nil)
+        
         request.willSend?(request)
         Ladybug.willSend?(request)
         
         var urlString = request.url
-        if request.method == .GET || request.method == .DELETE {
-            urlString += Ladybug.queryString(request.parameters)
+        if (request.method == .GET || request.method == .DELETE || request.method == .PATCH) && request.parameters?.count > 0 {
+            var q = Ladybug.queryString(request.parameters)
+            if urlString.containsString("?") {
+                q = "&" + q.substringFromIndex(q.startIndex.advancedBy(1))
+            }
+            urlString += q
         }
         
         let url = NSURL(string: urlString)!
@@ -146,9 +180,9 @@ class Client {
         }
         
         if request.method == .POST || request.method == .PUT {
-            if let httpFiles = request.files {
+            if let httpFiles = request.files where httpFiles.count > 0 {
                 let body = NSMutableData()
-                let boundary = "--\(Constants.MultipartBoundary)\r\n".dataUsingEncoding(NSUTF8StringEncoding)!
+                let boundary = "--\(Ladybug.multipartFormBoundary)\r\n".dataUsingEncoding(NSUTF8StringEncoding)!
                 
                 if let params = request.parameters {
                     for (name, value) in params {
@@ -168,15 +202,34 @@ class Client {
                 }
                 
                 if body.length > 0 {
-                    body.appendData("--\(Constants.MultipartBoundary)--\r\n".dataUsingEncoding(NSUTF8StringEncoding)!)
+                    body.appendData("--\(Ladybug.multipartFormBoundary)--\r\n".dataUsingEncoding(NSUTF8StringEncoding)!)
                 }
                 
-                req.setValue("multipart/form-data; boundary=\(Constants.MultipartBoundary)", forHTTPHeaderField: Headers.ContentType)
+                req.setValue("multipart/form-data; boundary=\(Ladybug.multipartFormBoundary)", forHTTPHeaderField: Headers.ContentType)
+                req.HTTPBody = body
+            } else if let body = request.body {
+                if req.allHTTPHeaderFields?[Headers.ContentType] == nil {
+                    if Ladybug.sendParametersAsJSON {
+                        req.setValue("application/json", forHTTPHeaderField: Headers.ContentType)
+                    } else {
+                        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: Headers.ContentType)
+                    }
+                }
                 req.HTTPBody = body
             } else if let params = request.parameters {
-                let json = try? NSJSONSerialization.dataWithJSONObject(params, options: [])
-                req.setValue("application/json", forHTTPHeaderField: Headers.ContentType)
-                req.HTTPBody = json
+                if Ladybug.sendParametersAsJSON {
+                    let json = try? NSJSONSerialization.dataWithJSONObject(params, options: [])
+                    if req.allHTTPHeaderFields?[Headers.ContentType] == nil {
+                        req.setValue("application/json", forHTTPHeaderField: Headers.ContentType)
+                    }
+                    req.HTTPBody = json
+                } else {
+                    let p = Ladybug.urlEncode(params)
+                    if req.allHTTPHeaderFields?[Headers.ContentType] == nil {
+                        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: Headers.ContentType)
+                    }
+                    req.HTTPBody = p.dataUsingEncoding(NSUTF8StringEncoding)
+                }
             }
         }
         
@@ -200,7 +253,8 @@ class Client {
             
             let res: Response
             if let httpResponse = response as? NSHTTPURLResponse {
-                res = Response(status: httpResponse.statusCode, data: data, request: request, error: error)
+                let headers = httpResponse.allHeaderFields as! [String: String]
+                res = Response(status: httpResponse.statusCode, headers: headers, data: data, request: request, error: error)
             } else {
                 res = Response(request: request, error: error)
             }
@@ -215,13 +269,14 @@ class Client {
     }
 }
 
-public class Request: Equatable {
+public class Request: Equatable, Hashable {
     let id: String!
     
     public var url: String
     public var method: HTTPMethod
     public var headers: [String: String]
     public var parameters: [String: AnyObject]?
+    public var body: NSData?
     public var files: [File]?
     public var credential: NSURLCredential?
     public var willSend: (Request -> ())?
@@ -232,6 +287,7 @@ public class Request: Equatable {
         method: HTTPMethod = .GET,
         headers: [String: String] = [:],
         parameters: [String: AnyObject]? = nil,
+        body: NSData? = nil,
         files: [File]? = nil,
         credential: NSURLCredential? = nil,
         willSend: (Request -> ())? = nil,
@@ -243,11 +299,18 @@ public class Request: Equatable {
             self.method = method
             self.headers = headers
             self.parameters = parameters
+            self.body = body
             self.files = files
             self.credential = credential
             self.willSend = willSend
             self.beforeSend = beforeSend
             self.done = done
+    }
+    
+    public var hashValue: Int {
+        get {
+            return id.hashValue
+        }
     }
 }
 
@@ -261,7 +324,7 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
         willPerformHTTPRedirection response: NSHTTPURLResponse,
         newRequest request: NSURLRequest,
         completionHandler: (NSURLRequest?) -> Void) {
-        
+            
             completionHandler(Ladybug.followRedirects ? request : nil)
     }
     
@@ -273,7 +336,7 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
             let id = NSURLProtocol.propertyForKey(Constants.LadybugURLProperty, inRequest: task.originalRequest!) as! String
             let req = Ladybug.pendingRequests[id]
             
-            let serverTrust = challenge.protectionSpace.serverTrust!
+            let serverTrust = challenge.protectionSpace.serverTrust
             var allow: Bool?
             
             if challenge.previousFailureCount > 0 {
@@ -282,7 +345,7 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
             }
             
             if let config = Ladybug.sslPinning[task.originalRequest!.URL!.host!] {
-                let certificate = SecTrustGetCertificateAtIndex(serverTrust, 0)!
+                let certificate = SecTrustGetCertificateAtIndex(serverTrust!, 0)!
                 let remoteCertData: NSData = SecCertificateCopyData(certificate)
                 
                 if let pinnedCertData = NSData(contentsOfFile: config.filePath) {
@@ -299,10 +362,10 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
             }
             
             if Ladybug.allowInvalidCertificates {
-                completionHandler(.UseCredential, NSURLCredential(trust: serverTrust))
+                completionHandler(.UseCredential, NSURLCredential(trust: serverTrust!))
             } else if let proceed = allow {
                 if proceed {
-                    completionHandler(.UseCredential, NSURLCredential(trust: serverTrust))
+                    completionHandler(.UseCredential, NSURLCredential(trust: serverTrust!))
                 } else {
                     print("Invalid SSL certificate for host: \(task.originalRequest!.URL!.host!)")
                     #if os(iOS)
@@ -333,6 +396,7 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
 
 public class Response {
     public let status: Int
+    public let headers: [String: String]
     public let data: NSData?
     public let request: Request
     public let error: NSError?
@@ -358,8 +422,9 @@ public class Response {
         return nil
     }
     
-    init(status: Int = 0, data: NSData? = nil, request: Request, error: NSError? = nil) {
+    init(status: Int = 0, headers: [String: String] = [:], data: NSData? = nil, request: Request, error: NSError? = nil) {
         self.status = status
+        self.headers = headers
         self.data = data
         self.request = request
         self.error = error
@@ -397,6 +462,7 @@ public struct File {
 }
 
 struct Headers {
+    static let Authorization = "Authorization"
     static let ContentType = "Content-Type"
 }
 
@@ -420,6 +486,7 @@ public enum HTTPMethod: String {
     case POST = "POST"
     case PUT = "PUT"
     case DELETE = "DELETE"
+    case PATCH = "PATCH"
 }
 
 #if os(iOS)
