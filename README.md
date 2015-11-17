@@ -3,7 +3,7 @@ Yet another Swift HTTP client. Inspired by jQuery's $.ajax.
 
 ### Usage
 
-Supports `GET`, `POST`, `PUT`, and `DELETE`. Request body is sent as JSON.
+Supports `GET`, `POST`, `PUT`, and `DELETE`.
 
 ```swift
 Ladybug.baseURL = "http://httpbin.org"
