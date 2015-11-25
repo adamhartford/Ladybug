@@ -19,8 +19,8 @@ class RequestViewController: NSViewController {
         
         Ladybug.baseURL = "http://httpbin.org"
         
-        let certPath = NSBundle.mainBundle().pathForResource("httpbin.org", ofType: "cer")
-        Ladybug.enableSSLPinning(.PublicKey, filePath: certPath!, host: "httpbin.org")
+        let certPath = NSBundle.mainBundle().URLForResource("httpbin.org", withExtension: "cer")!.absoluteString
+        Ladybug.enableSSLPinning(.PublicKey, filePath: certPath, host: "httpbin.org")
         
         // Add header for all requests
         Ladybug.additionalHeaders["X-Foo"] = "Bar"

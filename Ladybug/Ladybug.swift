@@ -111,8 +111,12 @@ public struct Ladybug {
         sslPinning[host] = SSLPinningConfig(type: type, filePath: filePath)
     }
     
-    public static func disableSSLPinning(host: String) {
-        sslPinning.removeValueForKey(host)
+    public static func disableSSLPinning(host: String? = nil) {
+        if let h = host {
+            sslPinning.removeValueForKey(h)
+        } else {
+            sslPinning.removeAll()
+        }
     }
     
     public static func queryString(parameters: [String: AnyObject]?) -> String {
@@ -348,7 +352,7 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
                 let certificate = SecTrustGetCertificateAtIndex(serverTrust!, 0)!
                 let remoteCertData: NSData = SecCertificateCopyData(certificate)
                 
-                if let pinnedCertData = NSData(contentsOfFile: config.filePath) {
+                if let pinnedCertData = NSData(contentsOfURL: NSURL(string: config.filePath)!) {
                     switch config.type {
                     case .Certificate:
                         allow = remoteCertData.isEqualToData(pinnedCertData)
@@ -372,6 +376,13 @@ class LadybugDelegate: NSObject, NSURLSessionTaskDelegate {
                         UIApplication.sharedApplication().networkActivityIndicatorVisible = false
                     #endif
                     // TODO cancel?
+                    
+                    Ladybug.pendingRequests[req!.id] = nil
+                    let res = Response(status: 0, headers: [:], data: nil, request: req!, error: nil)
+                    dispatch_async(dispatch_get_main_queue(), {
+                        req!.done?(res)
+                        Ladybug.done?(res)
+                    })
                 }
             } else if let credential = req?.credential {
                 completionHandler(.UseCredential, credential)
