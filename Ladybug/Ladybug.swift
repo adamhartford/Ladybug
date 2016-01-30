@@ -145,7 +145,7 @@ public struct Ladybug {
     }
     
     public static func urlEncode(obj: AnyObject) -> String {
-        return "\(obj)".stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLQueryAllowedCharacterSet())!
+        return "\(obj)".stringByAddingPercentEncodingWithAllowedCharacters(.URLQueryAllowedCharacterSet())!
     }
 }
 
